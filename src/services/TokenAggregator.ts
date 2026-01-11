@@ -23,12 +23,17 @@ export class TokenAggregator extends EventEmitter {
         console.log('Aggregator started...');
 
 
-        await this.aggregate();
+        const runLoop = async () => {
+            if (!this.isRunning) return;
+            try {
+                await this.aggregate();
+            } catch (error) {
+                console.error('Aggregation error:', error);
+            }
+            setTimeout(runLoop, intervalMs);
+        };
 
-
-        setInterval(() => {
-            this.aggregate().catch(console.error);
-        }, intervalMs);
+        runLoop();
     }
 
     async aggregate() {
