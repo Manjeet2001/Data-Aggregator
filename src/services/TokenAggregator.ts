@@ -39,14 +39,21 @@ export class TokenAggregator extends EventEmitter {
     async aggregate() {
         console.log('Fetching data...');
 
-        const dexTokens = await this.dexClient.searchTokens('SOL');
+        // 1. Fetch from sources (Primary: DexScreener)
+        let tokens = await this.dexClient.searchTokens('SOL');
 
+        // Fallback to Jupiter if DexScreener failed or was rate limited
+        if (!tokens || tokens.length === 0) {
+            console.log('DexScreener yielded no results (or rate limited). Falling back to Jupiter...');
+            tokens = await this.jupClient.getTokens();
+        }
 
-        for (const token of dexTokens) {
+        // 2. Merge and Save
+        for (const token of tokens) {
             await this.cache.saveToken(token);
         }
 
-        this.emit('update', dexTokens);
-        console.log(`Aggregated ${dexTokens.length} tokens.`);
+        this.emit('update', tokens);
+        console.log(`Aggregated ${tokens.length} tokens.`);
     }
 }
