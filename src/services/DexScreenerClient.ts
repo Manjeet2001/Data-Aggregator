@@ -6,23 +6,34 @@ export class DexScreenerClient {
     private lastRequestTime = 0;
     private MIN_REQUEST_INTERVAL = 1000;
 
-    async searchTokens(query: string): Promise<TokenData[]> {
+    async searchTokens(query: string, retries = 3): Promise<TokenData[]> {
         await this.enforceRateLimit();
 
         try {
             const response = await axios.get(`${DexScreenerClient.BASE_URL}/search?q=${query}`, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Encoding': 'gzip, deflate, br'
                 }
             });
             const pairs: DexScreenerPair[] = response.data.pairs || [];
 
-
             const solPairs = pairs.filter(p => p.chainId === 'solana');
 
             return solPairs.map(this.normalizeTokenData);
-        } catch (error) {
-            console.error('DexScreener API error:', error);
+        } catch (error: any) {
+            if (error.response && error.response.status === 429 && retries > 0) {
+                const retryAfter = error.response.headers['retry-after']
+                    ? parseInt(error.response.headers['retry-after']) * 1000
+                    : 5000;
+
+                console.log(`Rate limited! Retrying in ${retryAfter}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryAfter + 1000)); // Add 1s buffer
+                return this.searchTokens(query, retries - 1);
+            }
+
+            console.error('DexScreener API error:', error.message);
             return [];
         }
     }
