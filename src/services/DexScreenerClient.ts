@@ -4,13 +4,17 @@ import { TokenData, DexScreenerPair } from '../types';
 export class DexScreenerClient {
     private static BASE_URL = 'https://api.dexscreener.com/latest/dex';
     private lastRequestTime = 0;
-    private MIN_REQUEST_INTERVAL = 200;
+    private MIN_REQUEST_INTERVAL = 1000;
 
     async searchTokens(query: string): Promise<TokenData[]> {
         await this.enforceRateLimit();
 
         try {
-            const response = await axios.get(`${DexScreenerClient.BASE_URL}/search?q=${query}`);
+            const response = await axios.get(`${DexScreenerClient.BASE_URL}/search?q=${query}`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
             const pairs: DexScreenerPair[] = response.data.pairs || [];
 
 

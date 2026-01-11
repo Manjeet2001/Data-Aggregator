@@ -23,6 +23,17 @@ app.use(express.json());
 
 app.use('/api', apiRoutes);
 
+app.get('/', (req, res) => {
+    res.json({
+        service: 'Etherna API',
+        status: 'running',
+        endpoints: {
+            health: '/health',
+            tokens: '/api/tokens'
+        }
+    });
+});
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
