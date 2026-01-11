@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etherna Live Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .flash { animation: flash 1s; }
+        @keyframes flash { 0% { background-color: #22c55e; } 100% { background-color: transparent; } }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen p-8">
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center pb-6 border-b border-gray-700">
+            <div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                    Etherna Monitor
+                </h1>
+                <p class="text-gray-400 mt-1">Real-time Token Aggregator</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="status" class="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/50">
+                    Disconnected
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass p-4 rounded-xl">
+                <div class="text-sm text-gray-400">Total Tokens</div>
+                <div id="token-count" class="text-2xl font-mono font-bold mt-1">0</div>
+            </div>
+            <div class="glass p-4 rounded-xl">
+                <div class="text-sm text-gray-400">Last Update</div>
+                <div id="last-update" class="text-lg font-mono mt-1 text-blue-400">Waiting...</div>
+            </div>
+            <div class="glass p-4 rounded-xl col-span-2">
+                <div class="text-sm text-gray-400">System Status</div>
+                <div id="system-msg" class="text-sm mt-2 text-gray-300">Initializing connection...</div>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="glass rounded-xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/50 text-gray-400 text-sm uppercase tracking-wider">
+                            <th class="p-4">Token</th>
+                            <th class="p-4 text-right">Price (SOL)</th>
+                            <th class="p-4 text-right">Volume (24h)</th>
+                            <th class="p-4 text-right">Liquidity</th>
+                            <th class="p-4">Source</th>
+                        </tr>
+                    </thead>
+                    <tbody id="token-list" class="divide-y divide-gray-700/50">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Logs Console -->
+        <div class="glass p-4 rounded-xl h-48 overflow-y-auto font-mono text-xs text-green-400 bg-black/40" id="console-logs">
+            <div>> System initialized. Ready to connect.</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const statusEl = document.getElementById('status');
+        const listEl = document.getElementById('token-list');
+        const countEl = document.getElementById('token-count');
+        const timeEl = document.getElementById('last-update');
+        const logsEl = document.getElementById('console-logs');
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg}`;
+            logsEl.appendChild(div);
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+
+        socket.on('connect', () => {
+            statusEl.textContent = '● Live';
+            statusEl.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/50';
+            log('Connected to WebSocket server');
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/50';
+            log('Disconnected from server');
+        });
+
+        socket.on('price_update', (tokens) => {
+            if (!tokens || tokens.length === 0) return;
+            
+            log(`Received update for ${tokens.length} tokens`);
+            countEl.textContent = tokens.length;
+            timeEl.textContent = new Date().toLocaleTimeString();
+            
+            // Clear current list
+            listEl.innerHTML = '';
+
+            tokens.forEach(token => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/5 transition-colors fade-in';
+                
+                // Format numbers
+                const price = token.price_sol > 0 ? token.price_sol.toFixed(6) : '<span class="text-yellow-500">NaN (MetaData Only)</span>';
+                
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-white">${token.token_ticker}</div>
+                        <div class="text-xs text-gray-500">${token.token_name}</div>
+                        <div class="text-[10px] text-gray-600 font-mono truncate w-24">${token.token_address}</div>
+                    </td>
+                    <td class="p-4 text-right font-mono text-blue-300 font-bold">${price}</td>
+                    <td class="p-4 text-right font-mono text-gray-300">${Math.floor(token.volume_sol).toLocaleString()}</td>
+                    <td class="p-4 text-right font-mono text-gray-300">${Math.floor(token.liquidity_sol).toLocaleString()}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide ${token.source.includes('dexscreener') ? 'bg-cyan-900 text-cyan-200' : 'bg-orange-900 text-orange-200'}">
+                            ${token.source.join(', ')}
+                        </span>
+                    </td>
+                `;
+                listEl.appendChild(tr);
+            });
+        });
+    </script>
+</body>
+</html>
