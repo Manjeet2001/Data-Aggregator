@@ -30,7 +30,8 @@ app.get('/', (req, res) => {
         status: 'running',
         endpoints: {
             health: '/health',
-            tokens: '/api/tokens'
+            tokens: '/api/tokens',
+            dashboard: '/index.html'
         }
     });
 });
