@@ -21,18 +21,18 @@
     "helmet": "^8.1.0",
     "ioredis": "^5.9.1",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "typescript": "^5.9.3",
+    "@types/node": "^25.0.5",
+    "@types/express": "^5.0.6",
+    "@types/cors": "^2.8.19",
+    "@types/helmet": "^0.0.48"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/helmet": "^0.0.48",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.0.5",
     "jest": "^30.2.0",
     "nodemon": "^3.1.11",
     "ts-jest": "^29.4.6",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "ts-node": "^10.9.2"
   }
 }
